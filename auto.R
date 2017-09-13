@@ -30,18 +30,16 @@ get.brand <- function(series, model) {
 status.stable <- 'STABLE'
 status.increasing <- 'INCREASING'
 status.decreasing <- 'DECREASING'
-status.undefined <- 'UNDEFINED'
 
 status <- list(GM=status.stable, HYUNDAI=status.stable, 
   FORD=status.decreasing, RENAULT=status.decreasing, 
-  TOYOTA=status.increasing, JEEP=status.undefined,
+  TOYOTA=status.increasing, JEEP=status.increasing,
   FIAT=status.decreasing, HONDA=status.decreasing,
   VOLKSWAGEN=status.decreasing, NISSAN=status.increasing,
   PEUGEOT=status.increasing, CITROEN=status.increasing, 
-  KIA=status.undefined, `MERCEDES BENZ`=status.undefined, 
+  KIA=status.increasing, `MERCEDES BENZ`=status.increasing, 
   AUDI=status.stable, MITSUBISHI=status.decreasing, 
-  BMW=status.increasing, `LAND ROVER`=status.increasing, 
-  Jeep=status.undefined, `MerCEDES BENZ`=status.undefined)
+  BMW=status.increasing, `LAND ROVER`=status.increasing)
 # ##################################
 
 file <- 'Auto Data.xlsx'
@@ -50,7 +48,11 @@ sheet.input <- read_excel(file, sheet=1)
 sheet.vertical <- read_excel(file, sheet=2)
 sheet.type <- read_excel(file, sheet=3)
 
+# Some workarounds to deal with malformed data on `dados verticalizados` sheet
 sheet.vertical.length <- length(sheet.vertical$DATA)
+sheet.vertical$MARCA[sheet.vertical$MARCA == 'Jeep'] <- 'JEEP'
+sheet.vertical$MARCA[sheet.vertical$MARCA == 'MerCEDES BENZ'] <- 
+  'MERCEDES BENZ'
 
 # Some workarounds to deal with malformed data on `tipos de veiculo` sheet
 sheet.type.length <- length(sheet.type[1][[1]])+1
@@ -113,7 +115,7 @@ for (name in brands) {
 # Plot full series
 # ################
 # for (key in names(series)) {
-#   plot(series[[key]], ylab=key)
+#   plot(series[[key]]$ts, ylab=key)
 # }
 # ################
 
@@ -121,47 +123,50 @@ for (name in brands) {
 # Plot relative trend
 # ###################
 # for (key in names(series)) {
-#   plot(decompose(series[[key]])$trend, ylab=key, 
-#     ylim=c(min(series[[key]]),max(series[[key]])))
+#   plot(decompose(series[[key]]$ts)$trend, ylab=key, 
+#     ylim=c(min(series[[key]]$ts),max(series[[key]]$ts)))
 # }
 # ###################
 
 # ###############
 # Avg brand value
 # ###############
-# avg <- list()
-# for (key in names(series)) {
-#   avg[[key]] <- mean(series[[key]])
-# }
+avg <- list()
+for (key in names(series)) {
+  avg[[key]] <- mean(series[[key]]$ts)
+}
 # avg.ordered <- avg[order(-unlist(avg))]
-# plot(values.num(avg.ordered))
+# plot(values.num(avg), ylab='average')
 # lines(1:100,rep.int(7500,100),col='red')
 # ###############
 
-# #################################################################
-# Split brands in top (bigger numbers) and bottom (smaller numbers)
-# #################################################################
-# top <- list()
-# bottom <- list()
+# #####################################################################
+# Split brands in popular (bigger numbers) and luxury (smaller numbers)
+# #####################################################################
+popular <- list()
+luxury <- list()
 
-# for (i in 1:sheet.type.length) {
-#   model <- sheet.type.models[i]
-#   type <- sheet.type.types[i]
+for (i in 1:sheet.type.length) {
+  model <- sheet.type.models[i]
+  type <- sheet.type.types[i]
 
-#   value <- avg[[get.brand(series,model)]]
-#   if (value > 7500) {
-#     top[[get.brand(series,model)]] <- 
-#       c(top[[get.brand(series,model)]], type)
-#   } else {
-#     bottom[[get.brand(series,model)]] <- 
-#       c(bottom[[get.brand(series,model)]], type)
-#   }
-# }
+  value <- avg[[get.brand(series,model)]]
+  if (value > 7500) {
+    popular[[get.brand(series,model)]] <- 
+      c(popular[[get.brand(series,model)]], type)
+  } else {
+    luxury[[get.brand(series,model)]] <- 
+      c(luxury[[get.brand(series,model)]], type)
+  }
+}
 
-# top.types <- unique(values.char(top))
-# bottom.types <- unique(values.char(bottom))
-# diff <- setdiff(top.types, bottom.types)
-# #################################################################
+popular.types <- unique(values.char(popular))
+luxury.types <- unique(values.char(luxury))
+diff.pl <- setdiff(popular.types, luxury.types)
+cat('Popular vehicle types:',popular.types,'\n')
+cat('Luxury vehicle types:',luxury.types,'\n')
+cat('Popular-exclusive vehicle types:',diff.pl,'\n')
+# #####################################################################
 
 # ###################################################################
 # Split values in solid investiment (either increasing or stable) 
@@ -185,5 +190,8 @@ for (i in 1:sheet.type.length) {
 
 solid.types <- unique(values.char(solid))
 risky.types <- unique(values.char(risky))
-diff <- setdiff(solid.types, risky.types)
+diff.sr <- setdiff(solid.types, risky.types)
+diff.rs <- setdiff(risky.types, solid.types)
+cat('Solid investiment vehicle types:',diff.sr,'\n')
+cat('Risky investiment vehicle types:',diff.rs,'\n')
 # ###################################################################
