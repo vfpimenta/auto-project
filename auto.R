@@ -20,6 +20,29 @@ get.brand <- function(series, model) {
   return(brand)
 }
 
+get.models <- function(map.type, type) {
+  models = c()
+  for (i in 1:length(map.type$models)) {
+    if (map.type$types[i] == type) {
+      models <- c(models,map.type$models[i])
+    }
+  }
+  return(models)
+}
+
+plot.series <- function(series) {
+  for (key in names(series)) {
+    plot(series[[key]]$ts, ylab=key)
+  }
+}
+
+plot.trend <- function(series) {
+  for (key in names(series)) {
+    plot(decompose(series[[key]]$ts)$trend, ylab=key, 
+      ylim=c(min(series[[key]]$ts),max(series[[key]]$ts)))
+  }
+}
+
 '%not in%' <- function (x, table){
   is.na(match(x, table, nomatch=NA_integer_))
 }
@@ -58,36 +81,55 @@ sheet.vertical$MARCA[sheet.vertical$MARCA == 'MerCEDES BENZ'] <-
 sheet.type.length <- length(sheet.type[1][[1]])+1
 sheet.type.models <- c(names(sheet.type[1]),sheet.type[1][[1]])
 sheet.type.types <- c(names(sheet.type[2]),sheet.type[2][[1]])
+sheet.type.types[is.na(sheet.type.types)] <- 'DESCONHECIDO'
 
-# models <- unique(sheet.vertical$MODELO)
+# brands <- unique(sheet.vertical$MARCA)
 # series <- list()
 
-# for (name in models) {
-#   num <- c()
+# for (name in brands) {
+#   vals <- list()
+#   models <- c()
+
 #   for (i in 1:sheet.vertical.length) {
-#     if (sheet.vertical$MODELO[i] == name) {
-#       num <- c(num,sheet.vertical$`EMPLACAMENTO NUMERO`[i])
+#     if (sheet.vertical$MARCA[i] == name) {
+#       date <- as.character(sheet.vertical$DATA[i])
+#       model <- sheet.vertical$MODELO[i]
+#       val <- sheet.vertical$`EMPLACAMENTO NUMERO`[i]
+
+#       if (is.na(val)) {
+#         val <- 0
+#       }
+
+#       if (date %in% names(vals)) {
+#         vals[[date]] <- vals[[date]] + val
+#       } else {
+#         vals[[date]] <- val
+#       }
+
+#       if (model %not in% models){
+#         models <- c(models, model)
+#       }
 #     }
 #   }
-#   num[is.na(num)] <- 0 
-#   series[[name]] <- ts(rev(num), frequency=12, start=c(2015,1))
+
+#   series[[name]] <- NULL 
+#   series[[name]]$ts <- ts(rev(values.num(vals)), frequency=12, start=c(2015,1))
+#   series[[name]]$models <- models
 # }
 
-# for (key in names(series)) {
-#   plot(series[[key]], ylab=key)
-# }
-
-brands <- unique(sheet.vertical$MARCA)
+types <- unique(sheet.type.types)
 series <- list()
 
-for (name in brands) {
+map.type <- NULL
+map.type$models <- sheet.type.models
+map.type$types <- sheet.type.types
+
+for (name in types) {
   vals <- list()
-  models <- c()
 
   for (i in 1:sheet.vertical.length) {
-    if (sheet.vertical$MARCA[i] == name) {
+    if (sheet.vertical$MODELO[i] %in% get.models(map.type,name)) {
       date <- as.character(sheet.vertical$DATA[i])
-      model <- sheet.vertical$MODELO[i]
       val <- sheet.vertical$`EMPLACAMENTO NUMERO`[i]
 
       if (is.na(val)) {
@@ -99,42 +141,23 @@ for (name in brands) {
       } else {
         vals[[date]] <- val
       }
-
-      if (model %not in% models){
-        models <- c(models, model)
-      }
     }
   }
 
   series[[name]] <- NULL 
   series[[name]]$ts <- ts(rev(values.num(vals)), frequency=12, start=c(2015,1))
-  series[[name]]$models <- models
 }
 
-# ################
-# Plot full series
-# ################
-# for (key in names(series)) {
-#   plot(series[[key]]$ts, ylab=key)
-# }
-# ################
-
-# ###################
-# Plot relative trend
-# ###################
-# for (key in names(series)) {
-#   plot(decompose(series[[key]]$ts)$trend, ylab=key, 
-#     ylim=c(min(series[[key]]$ts),max(series[[key]]$ts)))
-# }
-# ###################
+#plot.series(series)
+plot.trend(series)
 
 # ###############
 # Avg brand value
 # ###############
-avg <- list()
-for (key in names(series)) {
-  avg[[key]] <- mean(series[[key]]$ts)
-}
+# avg <- list()
+# for (key in names(series)) {
+#   avg[[key]] <- mean(series[[key]]$ts)
+# }
 # avg.ordered <- avg[order(-unlist(avg))]
 # plot(values.num(avg), ylab='average')
 # lines(1:100,rep.int(7500,100),col='red')
@@ -143,55 +166,55 @@ for (key in names(series)) {
 # #####################################################################
 # Split brands in popular (bigger numbers) and luxury (smaller numbers)
 # #####################################################################
-popular <- list()
-luxury <- list()
+# popular <- list()
+# luxury <- list()
 
-for (i in 1:sheet.type.length) {
-  model <- sheet.type.models[i]
-  type <- sheet.type.types[i]
+# for (i in 1:sheet.type.length) {
+#   model <- sheet.type.models[i]
+#   type <- sheet.type.types[i]
 
-  value <- avg[[get.brand(series,model)]]
-  if (value > 7500) {
-    popular[[get.brand(series,model)]] <- 
-      c(popular[[get.brand(series,model)]], type)
-  } else {
-    luxury[[get.brand(series,model)]] <- 
-      c(luxury[[get.brand(series,model)]], type)
-  }
-}
+#   value <- avg[[get.brand(series,model)]]
+#   if (value > 7500) {
+#     popular[[get.brand(series,model)]] <- 
+#       c(popular[[get.brand(series,model)]], type)
+#   } else {
+#     luxury[[get.brand(series,model)]] <- 
+#       c(luxury[[get.brand(series,model)]], type)
+#   }
+# }
 
-popular.types <- unique(values.char(popular))
-luxury.types <- unique(values.char(luxury))
-diff.pl <- setdiff(popular.types, luxury.types)
-cat('Popular vehicle types:',popular.types,'\n')
-cat('Luxury vehicle types:',luxury.types,'\n')
-cat('Popular-exclusive vehicle types:',diff.pl,'\n')
+# popular.types <- unique(values.char(popular))
+# luxury.types <- unique(values.char(luxury))
+# diff.pl <- setdiff(popular.types, luxury.types)
+# cat('Popular vehicle types:',popular.types,'\n')
+# cat('Luxury vehicle types:',luxury.types,'\n')
+# cat('Popular-exclusive vehicle types:',diff.pl,'\n')
 # #####################################################################
 
 # ###################################################################
-# Split values in solid investiment (either increasing or stable) 
+# Split brands in solid investiment (either increasing or stable) 
 # and risky investiments (decreasing or unstable/unpredictable trend)
 # ###################################################################
-risky <- list()
-solid <- list()
+# risky <- list()
+# solid <- list()
 
-for (i in 1:sheet.type.length) {
-  model <- sheet.type.models[i]
-  type <- sheet.type.types[i]
-  brand <- get.brand(series,model)
+# for (i in 1:sheet.type.length) {
+#   model <- sheet.type.models[i]
+#   type <- sheet.type.types[i]
+#   brand <- get.brand(series,model)
 
-  if (status[[brand]] == status.increasing || 
-    status[[brand]] == status.stable) {
-    solid[[brand]] <- c(solid[[brand]], type)
-  } else {
-    risky[[brand]] <- c(risky[[brand]], type)
-  }
-}
+#   if (status[[brand]] == status.increasing || 
+#     status[[brand]] == status.stable) {
+#     solid[[brand]] <- c(solid[[brand]], type)
+#   } else {
+#     risky[[brand]] <- c(risky[[brand]], type)
+#   }
+# }
 
-solid.types <- unique(values.char(solid))
-risky.types <- unique(values.char(risky))
-diff.sr <- setdiff(solid.types, risky.types)
-diff.rs <- setdiff(risky.types, solid.types)
-cat('Solid investiment vehicle types:',diff.sr,'\n')
-cat('Risky investiment vehicle types:',diff.rs,'\n')
+# solid.types <- unique(values.char(solid))
+# risky.types <- unique(values.char(risky))
+# diff.sr <- setdiff(solid.types, risky.types)
+# diff.rs <- setdiff(risky.types, solid.types)
+# cat('Solid investiment vehicle types:',diff.sr,'\n')
+# cat('Risky investiment vehicle types:',diff.rs,'\n')
 # ###################################################################
