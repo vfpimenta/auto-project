@@ -31,16 +31,20 @@ get.models <- function(map.type, type) {
   return(models)
 }
 
-plot.series <- function(series) {
+plot.series <- function(series, mode) {
   for (key in names(series)) {
+    png(paste('./plots/',mode,'-series-',key,'.png',sep=''))
     plot(series[[key]]$ts, ylab=key)
+    dev.off()
   }
 }
 
-plot.trend <- function(series) {
+plot.trend <- function(series, mode) {
   for (key in names(series)) {
+    png(paste('./plots/',mode,'-trend-',key,'.png',sep=''))
     plot(decompose(series[[key]]$ts)$trend, ylab=key, 
       ylim=c(min(series[[key]]$ts),max(series[[key]]$ts)))
+    dev.off()
   }
 }
 
@@ -145,7 +149,8 @@ if (opt$mode == 'brand') {
     }
 
     series[[name]] <- NULL 
-    series[[name]]$ts <- ts(rev(values.num(vals)), frequency=12, start=c(2015,1))
+    series[[name]]$ts <- ts(rev(values.num(vals)), 
+      frequency=12, start=c(2015,1))
     series[[name]]$models <- models
   }
 } else if (opt$mode == 'type') {
@@ -174,7 +179,8 @@ if (opt$mode == 'brand') {
     }
 
     series[[name]] <- NULL 
-    series[[name]]$ts <- ts(rev(values.num(vals)), frequency=12, start=c(2015,1))
+    series[[name]]$ts <- ts(rev(values.num(vals)), 
+      frequency=12, start=c(2015,1))
   }
 }
 
@@ -187,10 +193,14 @@ if(opt$plotlv[3] == 1 || (opt$mode == 'brand' && opt$printlv[1] == 1)){
 }
 
 if(opt$plotlv[1] == 1){
-  plot.series(series)
-} else if (opt$plotlv[2] == 1) {
-  plot.trend(series)
-} else if (opt$plotlv[3] == 1) {
+  plot.series(series, opt$mode)
+}
+
+if (opt$plotlv[2] == 1) {
+  plot.trend(series, opt$mode)
+}
+
+if (opt$plotlv[3] == 1) {
   plot.avg(avg)
 }
 
