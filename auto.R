@@ -228,6 +228,7 @@ if(opt$mode == 'brand' && opt$printlv[1] == 1) {
   popular.types <- unique(values.char(popular))
   luxury.types <- unique(values.char(luxury))
   diff.pl <- setdiff(popular.types, luxury.types)
+  diff.lp <- setdiff(luxury.types, popular.types)
   cat('Popular vehicle types:',popular.types,'\n')
   cat('Luxury vehicle types:',luxury.types,'\n')
   cat('Popular-exclusive vehicle types:',diff.pl,'\n')
