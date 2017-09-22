@@ -42,7 +42,17 @@ get.year <- function(date) {
   as.integer(substr(date,1,4))
 }
 
+plot.trend <- function(series, mode) {
+  for (key in names(series)) {
+    png(paste('./plots/',mode,'-trend-',key,'.png',sep=''))
+    plot(decompose(series[[key]]$ts)$trend, ylab=key, 
+      ylim=c(min(series[[key]]$ts),max(series[[key]]$ts)))
+    dev.off()
+  }
+}
+
 data <- read.csv('sample_car_dealer_visits.csv')
+centers <- read.csv('cluster_centers.csv')
 
 dates <- unique(as.Date(data$dt)[order(as.Date(data$dt))])
 start.date <- head(dates, 1)
@@ -89,22 +99,22 @@ for (name in names(series)) {
   lng.means <- c(lng.means, mean(series[[name]]$lng))
 }
 
+png('./plots/weekdays-visits.png', width=960, height=960)
 barplot(values.num(wd), names.arg=names(wd))
+dev.off()
+
+png('./plots/monthdays-visits.png', width=960, height=960)
 barplot(values.num(md), names.arg=as.character(1:31))
+dev.off()
 
-# plot(1, xlim=c(-8.2,-7.85), ylim=c(-35,-34.82))
-# for (name in names(series)) {
-#   points(mean(series[[name]]$lng), mean(series[[name]]$lat),
-#     cex=mean(series[[name]]$ts), pch=21, bg='black')
-# }
-
+png('./plots/map-visits.png', width=960, height=1920)
 pe <- c(left = -35, top = -7.85, right = -34.82, bottom = -8.2)
 map <- get_stamenmap(pe, zoom = 12, maptype = "toner-background")
 p <- ggmap(map)
 d <- data.frame(lat=lat.means, lng=lng.means)
-p <- p + geom_point(data=d, aes(x=lng, y=lat), size=ts.means, color='red')
+cc <- data.frame(lat=centers$lat, lng=centers$lng)
+p <- p + geom_point(data=d, aes(x=lng, y=lat), size=ts.means*2, color='red')
+p <- p + geom_point(data=cc, aes(x=lng, y=lat), size=100, color='red', 
+  alpha=0.3)
 ggplot_build(p)
-
-# for (key in names(series)) {
-#   plot(series[[key]]$ts, ylab=key)
-# }
+dev.off()

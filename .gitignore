@@ -1,3 +1,5 @@
 .RData
 .Rhistory
 Rplots.pdf
+__pycache__/
+*.pyc
